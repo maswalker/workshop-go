@@ -35,6 +35,10 @@ func loadConfig() *models.Config {
 	return config.GetConfig()
 }
 
+func loadRouters(router *gin.Engine) {
+	// TODO
+}
+
 func startWeb(cfg *models.Config) {
 	mode := gin.ReleaseMode
 	if cfg.Service.Mode == "dev" {
@@ -50,6 +54,8 @@ func startWeb(cfg *models.Config) {
 		web.Logger(logger),
 		web.Recovery(logger),
 	)
+
+	loadRouters(router)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Web.Port),
