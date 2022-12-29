@@ -1,3 +1,12 @@
 web3:
   node: https://abc.com
   chainId: 1
+Log:
+  Level: 0
+  Mode: console
+  Path: ./
+  Compress: true
+Web:
+  Port: 8080
+Service:
+  Mode: ${ServiceMode}

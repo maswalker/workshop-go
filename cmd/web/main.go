@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"time"
 
-	h "github.com/maswalker/workshop-go/pkg/http"
+	h "go-seven/pkg/web"
 
 	"github.com/gin-gonic/gin"
 )

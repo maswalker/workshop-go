@@ -1,4 +1,4 @@
-package http
+package web
 
 import (
 	"reflect"
@@ -8,7 +8,7 @@ import (
 
 type (
 	HandlerType int
-	BindFunc    func(c *gin.Context, _ reflect.Type, req *reflect.Value) error
+	BindFunc    func(c *gin.Context, req *reflect.Value) error
 )
 
 const (
@@ -69,14 +69,14 @@ func wrapperHandler(controller interface{}, typeName HandlerType) gin.HandlerFun
 func buildParameter(c *gin.Context, tp reflect.Type, bindFunc BindFunc) (reflect.Value, error) {
 	reqStructType := tp.Elem()
 	req := reflect.New(reqStructType)
-	err := bindFunc(c, reqStructType, &req)
+	err := bindFunc(c, &req)
 	return reflect.ValueOf(req.Interface()), err
 }
 
-func shouldBindJSON(c *gin.Context, _ reflect.Type, req *reflect.Value) error {
+func shouldBindJSON(c *gin.Context, req *reflect.Value) error {
 	return c.ShouldBindJSON(req.Interface())
 }
 
-func shouldBindQuery(c *gin.Context, _ reflect.Type, req *reflect.Value) error {
+func shouldBindQuery(c *gin.Context, req *reflect.Value) error {
 	return c.ShouldBindQuery(req.Interface())
 }

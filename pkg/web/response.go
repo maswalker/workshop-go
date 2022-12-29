@@ -1,11 +1,11 @@
-package http
+package web
 
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	e "go-seven/pkg/error"
 
-	e "github.com/maswalker/workshop-go/pkg/error"
+	"github.com/gin-gonic/gin"
 )
 
 type Response struct {

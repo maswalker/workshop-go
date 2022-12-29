@@ -1,9 +1,12 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
+
+	"go-seven/pkg/models"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -128,7 +131,7 @@ type Logger struct {
 	level Level
 }
 
-var std = New(os.Stderr, InfoLevel, WithCaller(true))
+var std = NewConsole(os.Stderr, InfoLevel, WithCaller(true), AddCallerSkip(1))
 
 func Default() *Logger {
 	return std
@@ -157,43 +160,7 @@ type TeeOption struct {
 	Lef      LevelEnablerFunc
 }
 
-func NewTeeWithRotate(tops []TeeOption, opts ...Option) *Logger {
-	var cores []zapcore.Core
-	cfg := zap.NewProductionConfig()
-	cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("2006-01-02T15:04:05.000Z0700"))
-	}
-
-	for _, top := range tops {
-		top := top
-
-		lv := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-			return top.Lef(Level(lvl))
-		})
-
-		w := &lumberjack.Logger{
-			Filename:   top.Filename,
-			MaxSize:    top.Ropt.MaxSize,
-			MaxBackups: top.Ropt.MaxBackups,
-			MaxAge:     top.Ropt.MaxAge,
-			Compress:   top.Ropt.Compress,
-		}
-
-		core := zapcore.NewCore(
-			zapcore.NewJSONEncoder(cfg.EncoderConfig),
-			zapcore.AddSync(w),
-			lv,
-		)
-		cores = append(cores, core)
-	}
-
-	logger := &Logger{
-		l: zap.New(zapcore.NewTee(cores...), opts...),
-	}
-	return logger
-}
-
-func New(writer io.Writer, level Level, opts ...Option) *Logger {
+func NewConsole(writer io.Writer, level Level, opts ...Option) *Logger {
 	if writer == nil {
 		panic("the writer is nil")
 	}
@@ -212,6 +179,55 @@ func New(writer io.Writer, level Level, opts ...Option) *Logger {
 		level: level,
 	}
 	return logger
+}
+
+func New(cfg *models.LogConfig) *Logger {
+	level := cfg.Level
+	mode := cfg.Mode
+	compress := cfg.Compress
+
+	_cfg := zap.NewProductionConfig()
+	_cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(t.Format("2006-01-02T15:04:05.000Z0700"))
+	}
+
+	if mode == "console" {
+		core := zapcore.NewCore(
+			zapcore.NewJSONEncoder(_cfg.EncoderConfig),
+			zapcore.AddSync(os.Stderr),
+			zapcore.Level(level),
+		)
+		return &Logger{
+			l:     zap.New(core, WithCaller(true), AddCallerSkip(1)),
+			level: zapcore.Level(level),
+		}
+	} else {
+		var cores []zapcore.Core
+		for lvl := zapcore.Level(level); lvl <= zapcore.FatalLevel; lvl++ {
+			lv := zap.LevelEnablerFunc(func(l zapcore.Level) bool {
+				return l == lvl
+			})
+
+			w := &lumberjack.Logger{
+				Filename:   fmt.Sprintf("%s.log", lvl.String()),
+				MaxSize:    1,
+				MaxBackups: 1,
+				MaxAge:     3,
+				Compress:   compress,
+			}
+
+			core := zapcore.NewCore(
+				zapcore.NewJSONEncoder(_cfg.EncoderConfig),
+				zapcore.AddSync(w),
+				lv,
+			)
+			cores = append(cores, core)
+		}
+
+		return &Logger{
+			l: zap.New(zapcore.NewTee(cores...), WithCaller(true), AddCallerSkip(1)),
+		}
+	}
 }
 
 func (l *Logger) Sync() error {

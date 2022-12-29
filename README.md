@@ -15,5 +15,3 @@
 ## Web3
 
 ## Log - Zap
-
-## Context
